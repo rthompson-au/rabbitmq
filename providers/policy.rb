@@ -19,7 +19,7 @@
 #
 
 def policy_exists?(name)
-  cmd = Mixlib::ShellOut.new("rabbitmqctl list_policies |grep '#{name}\\b'")
+  cmd = Mixlib::ShellOut.new("rabbitmqctl rabbit@#{node.name} list_policies |grep '#{name}\\b'")
   cmd.environment['HOME'] = ENV.fetch('HOME', '/root')
   cmd.run_command
   begin
@@ -32,7 +32,7 @@ end
 
 action :set do
   unless policy_exists?(new_resource.policy)
-    cmd = "rabbitmqctl set_policy"
+    cmd = "rabbitmqctl rabbit@#{node.name} set_policy"
     cmd << " -p #{new_resource.vhost}" unless new_resource.vhost.nil?
     cmd << " #{new_resource.policy}"
     cmd << " \"#{new_resource.pattern}\""
@@ -69,7 +69,7 @@ end
 action :clear do
   if policy_exists?(new_resource.policy)
     execute "clear_policy #{new_resource.policy}" do
-      command "rabbitmqctl clear_policy #{new_resource.policy}"
+      command "rabbitmqctl rabbit@#{node.name} clear_policy #{new_resource.policy}"
     end
 
     new_resource.updated_by_last_action(true)
@@ -79,7 +79,7 @@ end
 
 action :list do
   execute "list_policies" do
-    command "rabbitmqctl list_policies"
+    command "rabbitmqctl rabbit@#{node.name} list_policies"
   end
 
   new_resource.updated_by_last_action(true)

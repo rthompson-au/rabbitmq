@@ -18,7 +18,7 @@
 #
 
 def user_exists?(name)
-  cmdStr = "rabbitmqctl -q list_users |grep '^#{name}\\b'"
+  cmdStr = "rabbitmqctl rabbit@#{node.name} -q list_users |grep '^#{name}\\b'"
   cmd = Mixlib::ShellOut.new(cmdStr)
   cmd.environment['HOME'] = ENV.fetch('HOME', '/root')
   cmd.run_command
@@ -34,7 +34,7 @@ end
 
 def user_has_tag?(name, tag)
   tag = '"\[\]"' if tag.nil?
-  cmdStr = "rabbitmqctl -q list_users | grep \"^#{name}\\b\" | grep #{tag}"
+  cmdStr = "rabbitmqctl rabbit@#{node.name} -q list_users | grep \"^#{name}\\b\" | grep #{tag}"
   cmd = Mixlib::ShellOut.new(cmdStr)
   cmd.environment['HOME'] = ENV.fetch('HOME', '/root')
   cmd.run_command
@@ -52,7 +52,7 @@ end
 # empty perm_list means we're checking for any permissions
 def user_has_permissions?(name, vhost, perm_list = nil)
   vhost = '/' if vhost.nil?
-  cmdStr = "rabbitmqctl -q list_user_permissions #{name} | grep \"^#{vhost}\\b\""
+  cmdStr = "rabbitmqctl rabbit@#{node.name} -q list_user_permissions #{name} | grep \"^#{vhost}\\b\""
   cmd = Mixlib::ShellOut.new(cmdStr)
   cmd.environment['HOME'] = ENV.fetch('HOME', '/root')
   cmd.run_command
@@ -82,8 +82,8 @@ action :add do
     # to escape the escape character ('\') twice.  This is why the following is such a mess
     # of leaning toothpicks:
     new_password = new_resource.password.gsub("'", "'\\\\''")
-    cmdStr = "rabbitmqctl add_user #{new_resource.user} '#{new_password}'"
-    execute "rabbitmqctl add_user #{new_resource.user}" do
+    cmdStr = "rabbitmqctl rabbit@#{node.name} add_user #{new_resource.user} '#{new_password}'"
+    execute "rabbitmqctl rabbit@#{node.name} add_user #{new_resource.user}" do
       command cmdStr
       Chef::Log.info "Adding RabbitMQ user '#{new_resource.user}'."
       new_resource.updated_by_last_action(true)
@@ -93,7 +93,7 @@ end
 
 action :delete do
   if user_exists?(new_resource.user)
-    cmdStr = "rabbitmqctl delete_user #{new_resource.user}"
+    cmdStr = "rabbitmqctl rabbit@#{node.name} delete_user #{new_resource.user}"
     execute cmdStr do
       Chef::Log.debug "rabbitmq_user_delete: #{cmdStr}"
       Chef::Log.info "Deleting RabbitMQ user '#{new_resource.user}'."
@@ -109,7 +109,7 @@ action :set_permissions do
   perm_list = new_resource.permissions.split
   unless user_has_permissions?(new_resource.user, new_resource.vhost, perm_list)
     vhostOpt = "-p #{new_resource.vhost}" unless new_resource.vhost.nil?
-    cmdStr = "rabbitmqctl set_permissions #{vhostOpt} #{new_resource.user} \"#{perm_list.join("\" \"")}\""
+    cmdStr = "rabbitmqctl rabbit@#{node.name} set_permissions #{vhostOpt} #{new_resource.user} \"#{perm_list.join("\" \"")}\""
     execute cmdStr do
       Chef::Log.debug "rabbitmq_user_set_permissions: #{cmdStr}"
       Chef::Log.info "Setting RabbitMQ user permissions for '#{new_resource.user}' on vhost #{new_resource.vhost}."
@@ -124,7 +124,7 @@ action :clear_permissions do
   end
   if user_has_permissions?(new_resource.user, new_resource.vhost)
     vhostOpt = "-p #{new_resource.vhost}" unless new_resource.vhost.nil?
-    cmdStr = "rabbitmqctl clear_permissions #{vhostOpt} #{new_resource.user}"
+    cmdStr = "rabbitmqctl rabbit@#{node.name} clear_permissions #{vhostOpt} #{new_resource.user}"
     execute cmdStr do
       Chef::Log.debug "rabbitmq_user_clear_permissions: #{cmdStr}"
       Chef::Log.info "Clearing RabbitMQ user permissions for '#{new_resource.user}' from vhost #{new_resource.vhost}."
@@ -138,7 +138,7 @@ action :set_tags do
     Chef::Application.fatal!("rabbitmq_user action :set_tags fails with non-existant '#{new_resource.user}' user.")
   end
   unless user_has_tag?(new_resource.user, new_resource.tag)
-    cmdStr = "rabbitmqctl set_user_tags #{new_resource.user} #{new_resource.tag}"
+    cmdStr = "rabbitmqctl rabbit@#{node.name} set_user_tags #{new_resource.user} #{new_resource.tag}"
     execute cmdStr do
       Chef::Log.debug "rabbitmq_user_set_tags: #{cmdStr}"
       Chef::Log.info "Setting RabbitMQ user '#{new_resource.user}' tags '#{new_resource.tag}'"
@@ -152,7 +152,7 @@ action :clear_tags do
     Chef::Application.fatal!("rabbitmq_user action :clear_tags fails with non-existant '#{new_resource.user}' user.")
   end
   unless user_has_tag?(new_resource.user, '"\[\]"')
-    cmdStr = "rabbitmqctl set_user_tags #{new_resource.user}"
+    cmdStr = "rabbitmqctl rabbit@#{node.name} set_user_tags #{new_resource.user}"
     execute cmdStr do
       Chef::Log.debug "rabbitmq_user_clear_tags: #{cmdStr}"
       Chef::Log.info "Clearing RabbitMQ user '#{new_resource.user}' tags."
@@ -163,7 +163,7 @@ end
 
 action :change_password do
   if user_exists?(new_resource.user)
-    cmdStr = "rabbitmqctl change_password #{new_resource.user} #{new_resource.password}"
+    cmdStr = "rabbitmqctl rabbit@#{node.name} change_password #{new_resource.user} #{new_resource.password}"
     execute cmdStr do
       Chef::Log.debug "rabbitmq_user_change_password: #{cmdStr}"
       Chef::Log.info "Editing RabbitMQ user '#{new_resource.user}'."

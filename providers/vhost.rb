@@ -18,7 +18,7 @@
 #
 
 def vhost_exists?(name)
-  cmdStr = "rabbitmqctl -q list_vhosts | grep ^#{name}$"
+  cmdStr = "rabbitmqctl rabbit@#{node.name} -q list_vhosts | grep ^#{name}$"
   cmd = Mixlib::ShellOut.new(cmdStr)
   cmd.environment['HOME'] = ENV.fetch('HOME', '/root')
   cmd.run_command
@@ -34,7 +34,7 @@ end
 
 action :add do
   unless vhost_exists?(new_resource.vhost)
-    cmdStr = "rabbitmqctl add_vhost #{new_resource.vhost}"
+    cmdStr = "rabbitmqctl rabbit@#{node.name} add_vhost #{new_resource.vhost}"
     execute cmdStr do
       Chef::Log.debug "rabbitmq_vhost_add: #{cmdStr}"
       Chef::Log.info "Adding RabbitMQ vhost '#{new_resource.vhost}'."
@@ -45,7 +45,7 @@ end
 
 action :delete do
   if vhost_exists?(new_resource.vhost)
-    cmdStr =  "rabbitmqctl delete_vhost #{new_resource.vhost}"
+    cmdStr =  "rabbitmqctl rabbit@#{node.name} delete_vhost #{new_resource.vhost}"
     execute cmdStr do
       Chef::Log.debug "rabbitmq_vhost_delete: #{cmdStr}"
       Chef::Log.info "Deleting RabbitMQ vhost '#{new_resource.vhost}'."
